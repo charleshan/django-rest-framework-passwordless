@@ -169,14 +169,24 @@ class AbstractBaseCallbackTokenSerializer(serializers.Serializer):
     Returns a user if valid, None or a message if not.
     """
     token = TokenField(min_length=6, max_length=6, validators=[token_age_validator])
+    email = serializers.EmailField(required=False)
+    mobile = serializers.CharField(required=False)
 
 
 class CallbackTokenAuthSerializer(AbstractBaseCallbackTokenSerializer):
 
     def validate(self, attrs):
         callback_token = attrs.get('token', None)
+        email = attrs.get('email', None)
+        mobile = attrs.get('mobile', None)
 
-        token = CallbackToken.objects.get(key=callback_token, is_active=True)
+        if email:
+            kw = {api_settings.PASSWORDLESS_USER_EMAIL_FIELD_NAME: email, }
+        else:
+            kw = {api_settings.PASSWORDLESS_USER_MOBILE_FIELD_NAME: mobile}
+
+        user = User.objects.filter(**kw).first()
+        token = CallbackToken.objects.filter(key=callback_token, user=user, is_active=True).first()
 
         if token:
             # Check the token type for our uni-auth method.

@@ -125,7 +125,11 @@ curl -X POST -d "mobile=+15552143912" localhost:8000/auth/mobile/
    TokenAuthentication scheme.
 
 ```bash
-curl -X POST -d "token=815381" localhost:8000/callback/auth/
+curl -X POST -d "email=aaron@email.com&token=815381" localhost:8000/callback/auth/
+
+// OR
+
+curl -X POST -d "mobile=+15552143912&token=815381" localhost:8000/callback/auth/
 
 > HTTP/1.0 200 OK
 > {"token":"76be2d9ecfaf5fa4226d722bzdd8a4fff207ed0e”}
