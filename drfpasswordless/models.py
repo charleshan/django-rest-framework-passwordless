@@ -56,7 +56,7 @@ class CallbackToken(AbstractBaseCallbackToken):
     """
     Generates a random six digit number to be returned.
     """
-    key = models.CharField(default=generate_numeric_token, max_length=6, unique=True)
+    key = models.CharField(default=generate_numeric_token, max_length=6)
 
     class Meta(AbstractBaseCallbackToken.Meta):
         verbose_name = 'Callback Token'
