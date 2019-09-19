@@ -15,6 +15,11 @@ def invalidate_previous_tokens(sender, instance, **kwargs):
     """
     Invalidates all previously issued tokens as a post_save signal.
     """
+
+    # Skip demo users
+    if instance.user.email in api_settings.DEMO_USER_EMAIL_ADDRESSES:
+        return
+
     active_tokens = None
     if isinstance(instance, CallbackToken):
         active_tokens = CallbackToken.objects.active().filter(user=instance.user).exclude(id=instance.id)
