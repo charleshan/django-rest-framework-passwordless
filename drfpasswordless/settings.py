@@ -69,6 +69,9 @@ DEFAULTS = {
     # Automatically send verification email or sms when a user changes their alias.
     'PASSWORDLESS_AUTO_SEND_VERIFICATION_TOKEN': False,
 
+    # Automatically send verification email or sms when a user changes their alias.
+    'DEMO_USER_EMAIL_ADDRESSES': [],
+
 }
 
 # List of settings that may be in string import notation.

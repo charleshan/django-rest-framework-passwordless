@@ -88,6 +88,7 @@ class AliasEmailVerificationTests(APITestCase):
         api_settings.PASSWORDLESS_AUTH_TYPES = ['EMAIL']
         api_settings.PASSWORDLESS_EMAIL_NOREPLY_ADDRESS = 'noreply@example.com'
         api_settings.PASSWORDLESS_USER_MARK_EMAIL_VERIFIED = True
+        api_settings.DEMO_USER_EMAIL_ADDRESSES = ['demo@example.com']
 
         self.url = '/auth/email/'
         self.callback_url = '/callback/auth/'
@@ -180,3 +181,50 @@ class AliasMobileVerificationTests(APITestCase):
         api_settings.PASSWORDLESS_AUTH_TYPES = DEFAULTS['PASSWORDLESS_AUTH_TYPES']
         api_settings.PASSWORDLESS_MOBILE_NOREPLY_ADDRESS = DEFAULTS['PASSWORDLESS_EMAIL_NOREPLY_ADDRESS']
         api_settings.PASSWORDLESS_USER_MARK_MOBILE_VERIFIED = DEFAULTS['PASSWORDLESS_USER_MARK_MOBILE_VERIFIED']
+
+
+class DemoUserAuthTests(APITestCase):
+
+    def setUp(self):
+        api_settings.PASSWORDLESS_AUTH_TYPES = ['EMAIL']
+        api_settings.PASSWORDLESS_EMAIL_NOREPLY_ADDRESS = 'noreply@example.com'
+        api_settings.PASSWORDLESS_USER_MARK_EMAIL_VERIFIED = True
+        api_settings.DEMO_USER_EMAIL_ADDRESSES = ['demo@example.com']
+
+        self.url = '/auth/email/'
+        self.callback_url = '/callback/auth/'
+        self.email_field_name = api_settings.PASSWORDLESS_USER_EMAIL_FIELD_NAME
+        self.email_verified_field_name = api_settings.PASSWORDLESS_USER_EMAIL_VERIFIED_FIELD_NAME
+
+    def test_demo_authentication(self):
+        email = 'demo@example.com'
+        data = {'email': email}
+
+        # create a new user
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user = User.objects.get(**{self.email_field_name: email})
+        self.assertNotEqual(user, None)
+
+        # Verify a demo token exists for the demo user
+        callback = CallbackToken.objects.filter(user=user, is_active=True).first()
+        self.assertEqual(callback.key, '123456')
+        callback_data = {'token': callback, 'email': email}
+        callback_response = self.client.post(self.callback_url, callback_data)
+        self.assertEqual(callback_response.status_code, status.HTTP_200_OK)
+        callback = CallbackToken.objects.filter(user=user, is_active=True).first()
+        self.assertEqual(callback.key, '123456')
+
+        # Verify we got the token, then check and see that email_verified is now verified
+        # token = callback_response.data['token']
+        # self.assertEqual(token, Token.objects.get(user=user).key)
+
+        # Refresh and see that the endpoint is now verified as True
+        # user.refresh_from_db()
+        # self.assertEqual(getattr(user, self.email_verified_field_name), True)
+
+        # Change email, should result in flag changing to false
+        # setattr(user, self.email_field_name, 'aaron2@example.com')
+        # user.save()
+        # user.refresh_from_db()
+        # self.assertEqual(getattr(user, self.email_verified_field_name), False)
