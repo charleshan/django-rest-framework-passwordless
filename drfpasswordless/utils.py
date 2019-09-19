@@ -13,12 +13,10 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-def authenticate_by_token(callback_token):
+def authenticate_by_token(token):
     try:
-        token = CallbackToken.objects.get(key=callback_token, is_active=True)
-
-        # Returning a user designates a successful authentication.
-        token.user = User.objects.get(pk=token.user.pk)
+        if token.user.email in api_settings.DEMO_USER_EMAIL_ADDRESSES:
+            return token.user
         token.is_active = False  # Mark this token as used.
         token.save()
 
@@ -40,6 +38,20 @@ def create_callback_token_for_user(user, token_type):
     token_type = token_type.upper()
 
     if token_type == 'EMAIL':
+
+        # Check for demo user
+        if user.email in api_settings.DEMO_USER_EMAIL_ADDRESSES:
+            token = CallbackToken.objects.filter(user=user).first()
+            if token:
+                return token
+            else:
+                return CallbackToken.objects.create(
+                    user=user,
+                    key='123456',
+                    to_alias_type=token_type,
+                    to_alias=getattr(user, api_settings.PASSWORDLESS_USER_EMAIL_FIELD_NAME)
+                )
+
         token = CallbackToken.objects.create(user=user,
                                              to_alias_type=token_type,
                                              to_alias=getattr(user, api_settings.PASSWORDLESS_USER_EMAIL_FIELD_NAME))
@@ -55,12 +67,11 @@ def create_callback_token_for_user(user, token_type):
     return None
 
 
-def validate_token_age(callback_token):
+def validate_token_age(token):
     """
     Returns True if a given token is within the age expiration limit.
     """
     try:
-        token = CallbackToken.objects.get(key=callback_token, is_active=True)
         seconds = (timezone.now() - token.created_at).total_seconds()
         token_expiry_time = api_settings.PASSWORDLESS_TOKEN_EXPIRE_TIME
 

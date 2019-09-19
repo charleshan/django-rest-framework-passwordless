@@ -81,6 +81,9 @@ class EmailLoginCallbackTokenTests(APITestCase):
         self.email_field_name = api_settings.PASSWORDLESS_USER_EMAIL_FIELD_NAME
         self.user = User.objects.create(**{self.email_field_name: self.email})
 
+        self.email2 = 'charles@example.com'
+        self.user2 = User.objects.create(**{self.email_field_name: self.email2})
+
     def test_email_auth_failed(self):
         data = {'email': self.email}
         response = self.client.post(self.url, data)
@@ -138,6 +141,40 @@ class EmailLoginCallbackTokenTests(APITestCase):
         # Verify Auth Token
         auth_token = challenge_response.data['token']
         self.assertEqual(auth_token, Token.objects.filter(key=auth_token).first().key)
+
+    def test_email_auth_success_with_same_callback_key(self):
+        data = {'email': self.email}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data2 = {'email': self.email2}
+        response2 = self.client.post(self.url, data2)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+
+        # Change Tokens to have the same key
+        callback_token = CallbackToken.objects.filter(user=self.user, is_active=True).first()
+        callback_token.key = '123456'
+        callback_token.save()
+        challenge_data = {'token': callback_token, 'email': self.email}
+
+        callback_token2 = CallbackToken.objects.filter(user=self.user2, is_active=True).first()
+        callback_token2.key = '123456'
+        callback_token2.save()
+        challenge_data2 = {'token': callback_token2, 'email': self.email2}
+
+        # Try to auth with the callback token
+        challenge_response = self.client.post(self.challenge_url, challenge_data)
+        self.assertEqual(challenge_response.status_code, status.HTTP_200_OK)
+
+        challenge_response2 = self.client.post(self.challenge_url, challenge_data2)
+        self.assertEqual(challenge_response2.status_code, status.HTTP_200_OK)
+
+        # Verify Auth Token
+        auth_token = challenge_response.data['token']
+        self.assertEqual(auth_token, Token.objects.filter(key=auth_token).first().key)
+        self.assertEqual(self.user, Token.objects.filter(key=auth_token).first().user)
+        auth_token2 = challenge_response2.data['token']
+        self.assertEqual(auth_token2, Token.objects.filter(key=auth_token2).first().key)
+        self.assertEqual(self.user2, Token.objects.filter(key=auth_token2).first().user)
 
     def tearDown(self):
         api_settings.PASSWORDLESS_AUTH_TYPES = DEFAULTS['PASSWORDLESS_AUTH_TYPES']

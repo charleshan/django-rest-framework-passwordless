@@ -147,30 +147,27 @@ class MobileVerificationSerializer(AbstractBaseAliasVerificationSerializer):
         return 'mobile'
 
 
-"""
-Callback Token
-"""
-
-
-def token_age_validator(value):
-    """
-    Check token age
-    Makes sure a token is within the proper expiration datetime window.
-    """
-    valid_token = validate_token_age(value)
-    if not valid_token:
-        raise serializers.ValidationError("The token you entered isn't valid.")
-    return value
-
-
 class AbstractBaseCallbackTokenSerializer(serializers.Serializer):
     """
     Abstract class inspired by DRF's own token serializer.
     Returns a user if valid, None or a message if not.
     """
-    token = TokenField(min_length=6, max_length=6, validators=[token_age_validator])
+    token = TokenField(min_length=6, max_length=6)
     email = serializers.EmailField(required=False)
     mobile = serializers.CharField(required=False)
+
+    def validate_expiration(self, token):
+        """
+        Check token age
+        Makes sure a token is within the proper expiration datetime window.
+        """
+        if not token:
+            raise serializers.ValidationError("The token you entered isn't valid.")
+
+        valid_token = validate_token_age(token)
+        if not valid_token:
+            raise serializers.ValidationError("The token you entered isn't valid.")
+        return True
 
 
 class CallbackTokenAuthSerializer(AbstractBaseCallbackTokenSerializer):
@@ -187,6 +184,7 @@ class CallbackTokenAuthSerializer(AbstractBaseCallbackTokenSerializer):
 
         user = User.objects.filter(**kw).first()
         token = CallbackToken.objects.filter(key=callback_token, user=user, is_active=True).first()
+        self.validate_expiration(token)
 
         if token:
             # Check the token type for our uni-auth method.
@@ -229,8 +227,9 @@ class CallbackTokenVerificationSerializer(AbstractBaseCallbackTokenSerializer):
             user_id = self.context.get("user_id")
             callback_token = attrs.get('token', None)
 
-            token = CallbackToken.objects.get(key=callback_token, is_active=True)
             user = User.objects.get(pk=user_id)
+            token = CallbackToken.objects.filter(key=callback_token, user=user, is_active=True).first()
+            self.validate_expiration(token)
 
             if token.user == user:
                 # Check that the token.user is the request.user

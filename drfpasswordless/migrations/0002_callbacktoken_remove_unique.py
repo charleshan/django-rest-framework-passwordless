@@ -17,4 +17,8 @@ class Migration(migrations.Migration):
             name='key',
             field=models.CharField(default=drfpasswordless.models.generate_numeric_token, max_length=6),
         ),
+        migrations.AlterUniqueTogether(
+            name='callbacktoken',
+            unique_together=None,
+        ),
     ]

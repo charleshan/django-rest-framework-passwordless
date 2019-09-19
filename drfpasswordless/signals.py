@@ -26,16 +26,6 @@ def invalidate_previous_tokens(sender, instance, **kwargs):
             token.save()
 
 
-@receiver(signals.pre_save, sender=CallbackToken)
-def check_unique_tokens(sender, instance, **kwargs):
-    """
-    Ensures that mobile and email tokens are unique or tries once more to generate.
-    """
-    if isinstance(instance, CallbackToken):
-        if CallbackToken.objects.filter(key=instance.key, is_active=True).exists():
-            instance.key = generate_numeric_token()
-
-
 User = get_user_model()
 
 
