@@ -124,6 +124,10 @@ def send_email_with_callback_token(user, email_token, **kwargs):
         if api_settings.PASSWORDLESS_EMAIL_NOREPLY_ADDRESS:
             # Make sure we have a sending address before sending.
 
+            # Skip demo users
+            if user.email in api_settings.DEMO_USER_EMAIL_ADDRESSES:
+                return True
+
             # Get email subject and message
             email_subject = kwargs.get('email_subject',
                                        api_settings.PASSWORDLESS_EMAIL_SUBJECT)
