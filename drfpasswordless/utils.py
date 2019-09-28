@@ -71,6 +71,8 @@ def validate_token_age(token):
     """
     Returns True if a given token is within the age expiration limit.
     """
+    if token.user.email in api_settings.DEMO_USER_EMAIL_ADDRESSES:
+        return True
     try:
         seconds = (timezone.now() - token.created_at).total_seconds()
         token_expiry_time = api_settings.PASSWORDLESS_TOKEN_EXPIRE_TIME

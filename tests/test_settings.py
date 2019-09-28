@@ -1,3 +1,5 @@
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
@@ -214,6 +216,12 @@ class DemoUserAuthTests(APITestCase):
         self.assertEqual(callback_response.status_code, status.HTTP_200_OK)
         callback = CallbackToken.objects.filter(user=user, is_active=True).first()
         self.assertEqual(callback.key, '123456')
+        callback_response = self.client.post(self.callback_url, callback_data)
+        self.assertEqual(callback_response.status_code, status.HTTP_200_OK)
+        callback.created_at = timezone.now() - timedelta(days=30)
+        callback.save()
+        callback_response = self.client.post(self.callback_url, callback_data)
+        self.assertEqual(callback_response.status_code, status.HTTP_200_OK)
 
         # Verify we got the token, then check and see that email_verified is now verified
         # token = callback_response.data['token']
